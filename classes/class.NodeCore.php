@@ -30,7 +30,12 @@ abstract class NodeCore
 
     protected $_callChain;
     
+    private $_attributes;
     
+    function getCache()
+    {
+        return $this->_cache;
+    }
     /**
      * Constructor
      * 
@@ -54,7 +59,7 @@ abstract class NodeCore
         }
         else
         {
-            $plugins = func_get_args();
+            $plugins = func_get_args();         
             array_shift($plugins);              // shift $type
 
             $this->_callChain = new CallChain();
@@ -78,8 +83,6 @@ abstract class NodeCore
 
     public function __call($method, $params)
     {
-        //var_dump("Getting $method from a ".get_class($this));
-
         if (! isset($this->_cache[$method]) || ! empty($params))        // always refetch when $params is not empty
         {
             if (MeshTools::IsNodeType($method))
@@ -110,7 +113,8 @@ abstract class NodeCore
 
     public function __set($attribute, $value)
     {
-        throw new Exception('Setting attributes of ' . get_class($this) . ' object is forbidden');
+        $this->_cache->populate(array($attribute => $value));
+        return null;
     }
     
     public function __isset($attribute)
@@ -128,13 +132,135 @@ abstract class NodeCore
     
     abstract protected function _fetch();
 
-    public function commit(array $changes)
+    public function commit(array $attributes)
     {
-        $query = new Query($this->_callChain);
+        //TODO: move all this logic to the query class
 
-        $this->_cache->populate($query->commit($changes));      // keep all SQL in the Query class
+        // Get the node type
+        $type = $this->getType();
 
-        return $this;
+        // Determine the correct context
+        if (is_string($attributes['context']))
+        {
+            // Use the passed context
+            $attributes['context'] = MeshTools::GetContextPks($attributes['context']);
+        }
+        else if (!$attributes['context'])
+        {
+            if ($this->pk)
+            {
+                // Bypass context on existing nodes if not explicitly passed in
+                unset($attributes['context']);
+            }
+            else
+            {
+                // For new nodes use the default context
+                $attributes['context'] = (array)MeshTools::GetDefaultContextPk();
+
+                if (empty($attributes['context']))      // for non-context setups
+                {
+                    unset($attributes['context']);
+                }
+
+            }
+        }
+
+        if (! isset($attributes['context']))
+        {
+            // Do nothing, bypass context updates
+        }
+        else if (1 == count($attributes['context']))
+        {
+            $attributes['context'] = $attributes['context'][0];
+        }
+        else        // @todo New nodes can only have one context
+        {
+            throw new Exception('Cannot create node with ambiguous context');
+        }
+
+        $this->_cache->populate($attributes);
+        $commit_data = $this->_cache->getData();
+        // Separate the attirbutes from the links
+        foreach ($commit_data as $key => $value)
+        {
+            // Link Nodes if not attributes
+            if (! $this->_isAttribute($key))
+            {
+                // Use only valid node types
+                if (MeshTools::isNodeType($key))
+                {
+                    // Copy the attribute to the links array
+                    $links[$key] = $commit_data[$key];
+                }
+                else
+                {
+                    throw new Exception('Cannot link '.$type.' with '.$key.' because type '.$key.' doesn\'t exist.');
+                }
+
+                // Remove all non-attirbutes from the attributes array
+                unset($commit_data[$key]);
+            }
+        }
+        
+        try
+        {
+            // First update/insert the attributes
+            // If the node exists then peform update, otherwise insert
+            if ($this->pk)
+            {
+                $dbc = new DatabaseConnection();
+
+                $sql = "UPDATE $type SET ";
+
+                foreach ($commit_data as $key => $sql_value)
+                {
+                    $sql .= " $key = ".$dbc->quote($sql_value).", ";                    
+                }
+
+                $sql    = rtrim($sql, ', ');
+                $sql    .= " WHERE pk = $this->pk";
+                $dbc->query($sql);
+            }
+            else
+            {
+                $dbc = new DatabaseConnection();
+
+                // Clean the attributes
+                foreach ($commit_data as $key => $value)
+                {
+                    $sql_data[$key] = $dbc->quote($value);
+                }
+
+                // Build the columns and values
+                $columns    = implode(',', array_keys($sql_data));
+                $values     = implode(',', $sql_data);
+                $sql        = "INSERT INTO $type ($columns) VALUES ($values)";
+                $dbc->query($sql);
+
+                $this->_cache->populate(array('pk' => mysql_insert_id()));      // @todo MySQL-dependant!
+            }
+            /*
+            // Now link the nodes
+            if (count($links))
+            {
+                echo "Links\n";
+                foreach ($links as $type => $nodes)
+                {
+                    echo "Linking...";
+                    print_r($nodes->toArray());
+                    echo $type;
+                    //$this->_linkNodes($nodes, $type);
+                }
+            }
+
+            $node = new Node($this->_callChain);
+            */
+            return $node;
+        }
+        catch (Exception $e)
+        {
+            throw new Exception($e);
+        }
     }
 
     /*
@@ -143,6 +269,28 @@ abstract class NodeCore
     public function getType()
     {
         return $this->_callChain->getType();
+    }
+
+    private function _isAttribute($attribute)
+    {
+        // TODO: Move this logic into the query class
+
+        $type   = $this->getType();
+
+
+        if (empty($this->_attributes))
+        {
+            $dbc    = new DatabaseConnection();
+            $sql    = "SHOW COLUMNS FROM $type ";       // @todo Mysql specific
+            $rows   = $dbc->query($sql);
+
+            foreach ($rows as $r)
+            {
+                $this->_attributes[] = $r['Field'];
+            }
+        }
+
+        return in_array($attribute, $this->_attributes);
     }
 
     public function Me()
