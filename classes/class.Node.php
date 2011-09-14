@@ -85,14 +85,14 @@ class Node extends NodeCore
 
     public function Me()
     {
-    	$params = func_get_args();
+        $params = func_get_args();
 
-    	if (! empty($params))
-    	{
-    		throw new Exception('A single ' . __CLASS__ . ' cannot be filtered');
-    	}
+        if (! empty($params))
+        {
+            throw new Exception('A single ' . __CLASS__ . ' cannot be filtered');
+        }
 
-    	return call_user_func_array(array($this, 'parent::Me'), $params);
+        return call_user_func_array(array($this, 'parent::Me'), $params);
     }
 
     /**

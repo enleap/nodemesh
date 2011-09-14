@@ -67,7 +67,7 @@ class ExceptionHandler
     
     public static function SendToEmail($e, $email = null)
     {
-    	// Set up your own Email handler class or refer this to an existing one that you have implemented.
+        // Set up your own Email handler class or refer this to an existing one that you have implemented.
     }
 }
 

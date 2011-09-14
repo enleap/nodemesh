@@ -26,11 +26,11 @@ class MeshTools
 {
     private static $_ContextPks = array();
 
-	private static $_Context;
+    private static $_Context;
 
-	private static $_SavedContextPks = array();
+    private static $_SavedContextPks = array();
 
-	private static $_SavedContext;
+    private static $_SavedContext;
 
     private static $_DefaultContextPk;
 
@@ -61,40 +61,40 @@ class MeshTools
         return self::$DebugCounter;
     }
 
-	public static function RestoreContext()
-	{
-	    self::$_ContextPks   = self::$_SavedContextPks;
+    public static function RestoreContext()
+    {
+        self::$_ContextPks   = self::$_SavedContextPks;
         self::$_Context      = self::$_SavedContext;
-	}
+    }
 
-	public static function SetContext($name, $save = false)
-	{
-	    // Save previous context
+    public static function SetContext($name, $save = false)
+    {
+        // Save previous context
         if ($save)
         {
             self::$_SavedContextPks  = self::$_ContextPks;
             self::$_SavedContext     = self::$_Context;
         }
 
-	    // Check for unsetting of context
-	    if ('*' == $name)
-	    {
+        // Check for unsetting of context
+        if ('*' == $name)
+        {
             self::$_ContextPks   = array();
             self::$_Context      = null;
-	    }
-	    else
-	    {
-    	    self::$_ContextPks = self::GetContextPks($name);
+        }
+        else
+        {
+            self::$_ContextPks = self::GetContextPks($name);
             self::$_Context    = $name;
 
-    	    if (empty(self::$_ContextPks))
-    	    {
+            if (empty(self::$_ContextPks))
+            {
                 throw new Exception("Unknown context '$name'");
-    	    }
-	    }
+            }
+        }
 
-	    return;
-	}
+        return;
+    }
 
     public static function SetDefaultContext($name)
     {
@@ -111,16 +111,16 @@ class MeshTools
         }
     }
 
-	public static function GetContextPks($name = null)
-	{
+    public static function GetContextPks($name = null)
+    {
         if (0 == func_num_args())
         {
-	       return self::$_ContextPks;
+           return self::$_ContextPks;
         }
 
         $names = explode(',', $name);
 
-	    foreach ($names as &$n)
+        foreach ($names as &$n)
         {
             $n = "'" . mysql_escape_string($n) . "'";
         }
@@ -142,7 +142,7 @@ class MeshTools
         }
 
         return $pks;
-	}
+    }
 
     public static function GetDefaultContextPk()
     {
@@ -154,7 +154,7 @@ class MeshTools
        return self::$_DefaultContext;
     }
 
-	public static function GetContext($pks = null)
+    public static function GetContext($pks = null)
     {
         if (0 == func_num_args())
         {
