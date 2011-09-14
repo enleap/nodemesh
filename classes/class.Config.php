@@ -38,13 +38,15 @@ class Config
      * @param string $key           The configuration key
      * @param mixed $default        (Optional) A default value to return if there is no configuration for this key
      * 
-     * @return mixed                A configuration value (normally a scalar), or null if not found
+     * @return mixed                A configuration value (as a scalar), or null if not found
      */
     public static function GetValue($key, $default = null)
     {
         $config = self::GetConfig();
 
-        return array_key_exists($key, $config) ? $config[$key] : $default;
+        return array_key_exists($key, $config)
+                   ? (is_array($config[$key]) ? array_shift($config[$key]) : $config[$key])
+                   : $default;
     }
     
     
@@ -60,7 +62,7 @@ class Config
     {
         $config = self::GetConfig();
 
-        return array_key_exists($key, $config[$class]) ? (array) $config[$key] : $default;
+        return array_key_exists($key, $config) ? (array) $config[$key] : $default;
     }
     
     
