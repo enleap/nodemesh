@@ -7,24 +7,17 @@
  */
 
 
-// Autoload classes (make sure class.*.php are located in the include_path)
+// Simple include_path and autoload configuration
 
-set_include_path('../classes:../includes');
-
-include_once 'interface.DatabaseAdapterInterface.php';      // odd name, pull it in immediately
-
-function __autoload($class)
-{
-    require "class.$class.php";
-}
+require_once '../includes/config.php';
 
 
-// Explicitly set the environment (overrides URL-based environment naming).
+// Explicitly set the environment (use example.cfg, not default URL-based name)
 
 Environment::SetEnvironment('setup');
 
 
-// Start by creating the base mesh
+// Create a new mesh
 
 MeshTools::CreateMesh('middle_earth');
 
@@ -56,19 +49,21 @@ $attributes = array(
 MeshTools::CommitNodeType('treasures', $attributes);
 
 
-// Next, define the link types (ie., how each node types links to any other
-// node type)
+// Define the link types (how each node type links to other node types)
 
-// Hobbits can link to Locations
+// Hobbits can link to Locations (order is not important)
 MeshTools::CommitLinkType('hobbits', 'locations');
 
 // Hobbits can link to Treasures
 MeshTools::CommitLinkType('hobbits', 'treasures');
 
-// Hobbits can link to Hobbits (with named relationships)
-// NOTE: We will be using the built-in 'label' attribute to identify friendship (ie. 'eq:label:friendship')
+// Links automatically have 'label' and 'direction' attributes
+
+// Hobbits can link to Hobbits (we'll use link labels for relationships)
 MeshTools::CommitLinkType('hobbits', 'hobbits');
 
-// Locations can link to Locations (with direction)
-// NOTE: We will be using the built-in 'direction' attribute to identify direction (ie. 'dir:forward')
+// Locations can link to Locations (we'll use link directions for directions)
 MeshTools::CommitLinkType('locations', 'locations');
+
+
+echo "New node mesh has been created!\n";
