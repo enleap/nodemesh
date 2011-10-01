@@ -44,6 +44,7 @@ class Node extends NodeCore
             $data = $query->execute();
             if (! empty($data))
             {
+                // Needed to preserve existing data cache (ie. attributes set by user)
                 $this->_cache->populate(array_merge($data[0], $this->_cache->getData()));
             }
         }

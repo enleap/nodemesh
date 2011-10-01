@@ -31,11 +31,7 @@ abstract class NodeCore
     protected $_callChain;
     
     private $_attributes;
-    
-    function getCache()
-    {
-        return $this->_cache;
-    }
+
     /**
      * Constructor
      * 
@@ -113,8 +109,15 @@ abstract class NodeCore
 
     public function __set($attribute, $value)
     {
-        $this->_cache->populate(array($attribute => $value));
-        return null;
+        if ($attribute == "pk")
+        {
+            throw new Exception('Setting a value to pk is forbidden');
+        }
+        else
+        {
+            $this->_cache->populate(array($attribute => $value));
+        }
+        return;
     }
     
     public function __isset($attribute)
@@ -132,7 +135,7 @@ abstract class NodeCore
     
     abstract protected function _fetch();
 
-    public function commit(array $attributes)
+    public function commit(array $attributes = array())
     {
         //TODO: move all this logic to the query class
 
@@ -187,7 +190,7 @@ abstract class NodeCore
             if (! $this->_isAttribute($key))
             {
                 // Use only valid node types
-                if (MeshTools::isNodeType($key))
+                if (MeshTools::IsNodeType($key))
                 {
                     // Copy the attribute to the links array
                     $links[$key] = $commit_data[$key];
@@ -239,7 +242,7 @@ abstract class NodeCore
 
                 $this->_cache->populate(array('pk' => mysql_insert_id()));      // @todo MySQL-dependant!
             }
-            /*
+
             // Now link the nodes
             if (count($links))
             {
@@ -254,7 +257,6 @@ abstract class NodeCore
             }
 
             $node = new Node($this->_callChain);
-            */
             return $node;
         }
         catch (Exception $e)
