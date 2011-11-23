@@ -85,12 +85,6 @@ abstract class NodeCore
             {
                 $cluster = new Cluster($this->_callChain);
                 $cluster->_callChain->push($method, $params);
-
-                if (empty($params))        // only cache when $params is empty
-                {
-                    $this->_cache[$method] = $cluster;
-                }
-
                 return $cluster;
             }
             else
