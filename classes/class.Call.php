@@ -266,14 +266,14 @@ class Call
                 return;
 
             case 'not_linked':
-            	$this->not_linked = true;
-            	return;
+                $this->not_linked = true;
+                return;
 
             case 'not_linked_to':
                 $this->not_linked_to = true;
                 return;
                 
-        	case 'null':
+            case 'null':
                 // Do nothing
                 return;
 

@@ -20,8 +20,6 @@
 
 class Node extends NodeCore
 {
-    private $_attributes;
-
     public function __construct($type)
     {
         // For virtual nodes add the negative where clause
@@ -39,14 +37,15 @@ class Node extends NodeCore
     protected function _fetch()
     {
         $query  = new Query($this->_callChain);
-//        echo '<p>';
-//        print_r($query);
+        //    echo '<p>';
+        //     print_r($query);
         try
         {
             $data = $query->execute();
             if (! empty($data))
             {
-                $this->_cache->populate($data[0]);
+                // Needed to preserve existing data cache (ie. attributes set by user)
+                $this->_cache->populate(array_merge($data[0], $this->_cache->getData()));
             }
         }
         catch (Exception $e)
@@ -86,14 +85,14 @@ class Node extends NodeCore
 
     public function Me()
     {
-    	$params = func_get_args();
+        $params = func_get_args();
 
-    	if (! empty($params))
-    	{
-    		throw new Exception('A single ' . __CLASS__ . ' cannot be filtered');
-    	}
+        if (! empty($params))
+        {
+            throw new Exception('A single ' . __CLASS__ . ' cannot be filtered');
+        }
 
-    	return call_user_func_array(array($this, 'parent::Me'), $params);
+        return call_user_func_array(array($this, 'parent::Me'), $params);
     }
 
     /**
@@ -167,160 +166,6 @@ class Node extends NodeCore
                 throw new Exception('Link operations based on pks is not allowed because the node type cannot be determined.');
             }
         }
-    }
-
-
-    public function commit(array $attributes)
-    {
-        //TODO: move all this logic to the query class
-
-        // Get the node type
-        $type = $this->getType();
-
-        // Determine the correct context
-        if (is_string($attributes['context']))
-        {
-            // Use the passed context
-            $attributes['context'] = MeshTools::GetContextPks($attributes['context']);
-        }
-        else if (!$attributes['context'])
-        {
-            if ($this->pk)
-            {
-                // Bypass context on existing nodes if not explicitly passed in
-                unset($attributes['context']);
-            }
-            else
-            {
-                // For new nodes use the default context
-                $attributes['context'] = (array)MeshTools::GetDefaultContextPk();
-
-                if (empty($attributes['context']))      // for non-context setups
-                {
-                    unset($attributes['context']);
-                }
-
-            }
-        }
-
-        if (! isset($attributes['context']))
-        {
-            // Do nothing, bypass context updates
-        }
-        else if (1 == count($attributes['context']))
-        {
-            $attributes['context'] = $attributes['context'][0];
-        }
-        else        // @todo New nodes can only have one context
-        {
-            throw new Exception('Cannot create node with ambiguous context');
-        }
-
-
-        // Separate the attirbutes from the links
-        foreach ($attributes as $key => $value)
-        {
-            // Link Nodes if not attributes
-            if (! $this->_isAttribute($key))
-            {
-                // Use only valid node types
-                if ($this->_isNodeType($key))
-                {
-                    // Copy the attribute to the links array
-                    $links[$key] = $attributes[$key];
-                }
-                else
-                {
-                    throw new Exception('Cannot link '.$type.' with '.$key.' because type '.$key.' doesn\'t exist.');
-                }
-
-                // Remove all non-attirbutes from the attributes array
-                unset($attributes[$key]);
-            }
-        }
-
-        try
-        {
-            // First update/insert the attributes
-            // If the node exists then peform update, otherwise insert
-            if ($this->pk)
-            {
-                // cache the data for this node
-                $this->_cache->populate($attributes);
-
-                $dbc = new DatabaseConnection();
-
-                $sql = "UPDATE $type SET ";
-
-                foreach ($attributes as $key => $value)
-                {
-                    $sql .= " $key = '".$dbc->escape($value)."', ";
-                }
-
-                $sql    = rtrim($sql, ', ');
-                $sql    .= " WHERE pk = $this->pk";
-
-                $dbc->query($sql);
-            }
-            else
-            {
-                // cache the data for this node
-                $this->_cache->populate($attributes);
-
-                $dbc = new DatabaseConnection();
-
-                // Clean the attributes
-                array_walk($attributes, array($this, '_escapeString'));
-
-                // Build the columns and values
-                $columns    = implode(',', array_keys($attributes));
-                $values     = "'".implode("','", $attributes)."'";
-                $sql        = "INSERT INTO $type ($columns) VALUES ($values)";
-
-                $dbc->query($sql);
-
-                $this->_cache->populate(array('pk' => mysql_insert_id()));      // @todo MySQL-dependant!
-            }
-
-            // Now link the nodes
-            if (count($links))
-            {
-                foreach ($links as $type => $nodes)
-                {
-                    $this->_linkNodes($nodes, $type);
-                }
-            }
-
-            $node = new Node($this->_callChain);
-
-            return $node;
-        }
-        catch (Exception $e)
-        {
-            throw new Exception($e);
-        }
-    }
-
-    private function _isAttribute($attribute)
-    {
-        // TODO: Move this logic into the query class
-
-        $type   = $this->getType();
-
-
-        if (empty($this->_attributes))
-        {
-            $dbc    = new DatabaseConnection();
-            $sql    = "SHOW COLUMNS FROM $type ";       // @todo Mysql specific
-            $rows   = $dbc->query($sql);
-
-            foreach ($rows as $r)
-            {
-                $this->_attributes[] = $r['Field'];
-            }
-        }
-
-        return in_array($attribute, $this->_attributes);
     }
 
     /**

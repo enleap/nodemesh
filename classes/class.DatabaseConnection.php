@@ -58,4 +58,16 @@ class DatabaseConnection //implements DatabaseAdapterInterface
     {
         return isset($value) ? $this->_dba->escape($value) : 'NULL';
     }
+    
+    public function quote($value)
+    {
+        if (!is_null($value))
+        {
+            return "'".$this->escape($value)."'";
+        }
+        else
+        {
+            return 'NULL';
+        }
+    }
 }
